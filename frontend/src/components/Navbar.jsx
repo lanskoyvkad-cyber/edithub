@@ -62,6 +62,10 @@ function Navbar() {
         Монтажёры
       </Link>
 
+      <Link to="/favorites" style={navLinkStyle('/favorites')}>
+      Избранное
+    </Link>
+
       <Link to="/orders" style={navLinkStyle('/orders')}>
         Заказы
       </Link>

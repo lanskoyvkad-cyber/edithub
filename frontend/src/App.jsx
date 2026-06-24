@@ -27,6 +27,8 @@ import Profile from './pages/Profile';
 import EditorPublicProfile from './pages/EditorPublicProfile';
 import Editors from './pages/Editors';
 
+import Favorites from './pages/Favorites';
+
 function Home() {
   const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user'));
@@ -492,6 +494,11 @@ function App() {
         />
         <Route path="/editors" element={<Editors />} />
         <Route path="/editors/:id" element={<EditorPublicProfile />} />
+        <Route path="/favorites" element={<ProtectedRoute roles={['CLIENT']}>
+        <Favorites />
+    </ProtectedRoute>
+  }
+/>
       </Routes>
     </BrowserRouter>
   );
