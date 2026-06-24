@@ -4,12 +4,18 @@ import api from '../services/api';
 
 function Favorites() {
   const token = localStorage.getItem('token');
-  const user = JSON.parse(localStorage.getItem('user'));
+  const savedUser = localStorage.getItem('user');
+  const user = savedUser ? JSON.parse(savedUser) : null;
 
   const [editors, setEditors] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const loadFavorites = async () => {
+    if (!token || user?.role !== 'CLIENT') {
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await api.get('/users/favorites', {
         headers: {
@@ -53,6 +59,10 @@ function Favorites() {
     }
   };
 
+  useEffect(() => {
+    loadFavorites();
+  }, []);
+
   if (!token) {
     return (
       <div className="page">
@@ -74,10 +84,6 @@ function Favorites() {
       </div>
     );
   }
-
-  useEffect(() => {
-    loadFavorites();
-  }, []);
 
   if (loading) {
     return (

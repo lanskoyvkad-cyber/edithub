@@ -63,8 +63,8 @@ function Navbar() {
       </Link>
 
       <Link to="/favorites" style={navLinkStyle('/favorites')}>
-      Избранное
-    </Link>
+        Избранное
+      </Link>
 
       <Link to="/orders" style={navLinkStyle('/orders')}>
         Заказы
@@ -161,6 +161,12 @@ function Navbar() {
         <Link to="/" style={navLinkStyle('/', true)}>
           Главная
         </Link>
+        
+        {token && (
+          <Link to="/notifications" style={navLinkStyle('/notifications')}>
+            Уведомления
+          </Link>
+        )}
 
         {!token && renderGuestLinks()}
 

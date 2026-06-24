@@ -26,6 +26,7 @@ import EditorReviews from './pages/EditorReviews';
 import Profile from './pages/Profile';
 import EditorPublicProfile from './pages/EditorPublicProfile';
 import Editors from './pages/Editors';
+import Notifications from './pages/Notifications';
 
 import Favorites from './pages/Favorites';
 
@@ -44,7 +45,7 @@ function Home() {
           }}
         >
           <h1 style={{ marginTop: 0 }}>
-            EditHub 
+            EditHub
           </h1>
 
           <p
@@ -494,11 +495,23 @@ function App() {
         />
         <Route path="/editors" element={<Editors />} />
         <Route path="/editors/:id" element={<EditorPublicProfile />} />
-        <Route path="/favorites" element={<ProtectedRoute roles={['CLIENT']}>
-        <Favorites />
-    </ProtectedRoute>
-  }
-/>
+        <Route
+          path="/favorites"
+          element={
+            <ProtectedRoute roles={['CLIENT']}>
+              <Favorites />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute roles={['CLIENT', 'EDITOR', 'ADMIN']}>
+              <Notifications />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

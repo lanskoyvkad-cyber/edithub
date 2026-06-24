@@ -12,7 +12,7 @@ const portfolioRoutes = require('./routes/portfolioRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const userRoutes = require('./routes/userRoutes');
-
+const notificationRoutes = require('./routes/notificationRoutes');
 const app = express();
 
 app.use(cors());
@@ -26,6 +26,7 @@ app.use('/api/portfolio', portfolioRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.get('/', (req, res) => {
   res.json({
