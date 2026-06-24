@@ -246,6 +246,61 @@ function EditorPublicProfile() {
                         </p>
                     )}
 
+                    <div style={{ marginTop: '15px' }}>
+                        {editor.skills && (
+                            <p>
+                                <strong>Навыки:</strong> {editor.skills}
+                            </p>
+                        )}
+
+                        {editor.software && (
+                            <p>
+                                <strong>Программы:</strong> {editor.software}
+                            </p>
+                        )}
+
+                        {editor.video_types && (
+                            <p>
+                                <strong>Типы видео:</strong> {editor.video_types}
+                            </p>
+                        )}
+
+                        {editor.experience && (
+                            <p>
+                                <strong>Опыт:</strong> {editor.experience}
+                            </p>
+                        )}
+
+                        {(editor.telegram || editor.youtube || editor.instagram) && (
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    gap: '10px',
+                                    flexWrap: 'wrap',
+                                    marginTop: '12px'
+                                }}
+                            >
+                                {editor.telegram && (
+                                    <a href={editor.telegram} target="_blank" rel="noreferrer">
+                                        Telegram
+                                    </a>
+                                )}
+
+                                {editor.youtube && (
+                                    <a href={editor.youtube} target="_blank" rel="noreferrer">
+                                        YouTube
+                                    </a>
+                                )}
+
+                                {editor.instagram && (
+                                    <a href={editor.instagram} target="_blank" rel="noreferrer">
+                                        Instagram
+                                    </a>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
                     {user?.role === 'CLIENT' && (
                         <button
                             onClick={startChat}

@@ -157,7 +157,19 @@ exports.getAdminStats = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
   try {
-    const { full_name, city, avatar, bio } = req.body;
+    const {
+      full_name,
+      city,
+      avatar,
+      bio,
+      skills,
+      software,
+      video_types,
+      experience,
+      telegram,
+      youtube,
+      instagram
+    } = req.body;
 
     const result = await pool.query(
       `
@@ -166,11 +178,45 @@ exports.updateProfile = async (req, res) => {
         full_name = $1,
         city = $2,
         avatar = $3,
-        bio = $4
-      WHERE user_id = $5
-      RETURNING user_id, email, role, full_name, city, avatar, bio
+        bio = $4,
+        skills = $5,
+        software = $6,
+        video_types = $7,
+        experience = $8,
+        telegram = $9,
+        youtube = $10,
+        instagram = $11
+      WHERE user_id = $12
+      RETURNING 
+        user_id, 
+        email, 
+        role, 
+        full_name, 
+        city, 
+        avatar, 
+        bio,
+        skills,
+        software,
+        video_types,
+        experience,
+        telegram,
+        youtube,
+        instagram
       `,
-      [full_name, city, avatar, bio, req.user.user_id]
+      [
+        full_name,
+        city,
+        avatar,
+        bio,
+        skills,
+        software,
+        video_types,
+        experience,
+        telegram,
+        youtube,
+        instagram,
+        req.user.user_id
+      ]
     );
 
     res.json({
@@ -200,6 +246,13 @@ exports.getEditorProfile = async (req, res) => {
         city,
         avatar,
         bio,
+        skills,
+        software,
+        video_types,
+        experience,
+        telegram,
+        youtube,
+        instagram,
         created_at
       FROM users
       WHERE user_id = $1
@@ -253,7 +306,7 @@ exports.getEditorProfile = async (req, res) => {
 
     if (reviews.length > 0) {
       const sum = reviews.reduce(
-        (acc, review) => acc + Number(review.rating),
+        (acc, review) => acc + Number(review.rating || 0),
         0
       );
 
@@ -286,6 +339,10 @@ exports.getEditors = async (req, res) => {
         u.city,
         u.avatar,
         u.bio,
+        u.skills,
+        u.software,
+        u.video_types,
+        u.experience,
         COALESCE(ROUND(AVG(r.rating)::numeric, 1), 0) AS average_rating,
         COUNT(r.review_id)::int AS reviews_count
       FROM users u
@@ -296,7 +353,11 @@ exports.getEditors = async (req, res) => {
         u.full_name,
         u.city,
         u.avatar,
-        u.bio
+        u.bio,
+        u.skills,
+        u.software,
+        u.video_types,
+        u.experience
       ORDER BY average_rating DESC, reviews_count DESC
       `
     );

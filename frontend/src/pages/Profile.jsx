@@ -24,7 +24,14 @@ function Profile() {
         full_name: savedUser?.full_name || '',
         city: savedUser?.city || '',
         avatar: savedUser?.avatar || '',
-        bio: savedUser?.bio || ''
+        bio: savedUser?.bio || '',
+        skills: savedUser?.skills || '',
+        software: savedUser?.software || '',
+        video_types: savedUser?.video_types || '',
+        experience: savedUser?.experience || '',
+        telegram: savedUser?.telegram || '',
+        youtube: savedUser?.youtube || '',
+        instagram: savedUser?.instagram || ''
     });
 
     const [serviceForm, setServiceForm] = useState({
@@ -552,6 +559,34 @@ function Profile() {
                     )}
 
                     {savedUser?.role === 'EDITOR' && (
+                        <div style={{ marginTop: '15px' }}>
+                            {form.skills && (
+                                <p>
+                                    <strong>Навыки:</strong> {form.skills}
+                                </p>
+                            )}
+
+                            {form.software && (
+                                <p>
+                                    <strong>Программы:</strong> {form.software}
+                                </p>
+                            )}
+
+                            {form.video_types && (
+                                <p>
+                                    <strong>Типы видео:</strong> {form.video_types}
+                                </p>
+                            )}
+
+                            {form.experience && (
+                                <p>
+                                    <strong>Опыт:</strong> {form.experience}
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    {savedUser?.role === 'EDITOR' && (
                         <Link to={`/editors/${savedUser.user_id}`}>
                             <button style={{ marginTop: '10px' }}>
                                 Открыть публичный профиль
@@ -640,6 +675,103 @@ function Profile() {
                             style={{ width: '100%', marginTop: '6px' }}
                         />
                     </label>
+
+                    {savedUser?.role === 'EDITOR' && (
+                        <>
+                            <label>
+                                <strong>Навыки</strong>
+
+                                <textarea
+                                    name="skills"
+                                    placeholder="Например: монтаж YouTube, Reels, рекламные ролики"
+                                    value={form.skills}
+                                    onChange={handleChange}
+                                    rows="3"
+                                    style={{ width: '100%', marginTop: '6px' }}
+                                />
+                            </label>
+
+                            <label>
+                                <strong>Программы для монтажа</strong>
+
+                                <input
+                                    name="software"
+                                    placeholder="Например: Premiere Pro, After Effects, DaVinci Resolve"
+                                    value={form.software}
+                                    onChange={handleChange}
+                                    style={{ width: '100%', marginTop: '6px' }}
+                                />
+                            </label>
+
+                            <label>
+                                <strong>Типы видео</strong>
+
+                                <input
+                                    name="video_types"
+                                    placeholder="Например: YouTube, Shorts, TikTok, реклама, свадьбы"
+                                    value={form.video_types}
+                                    onChange={handleChange}
+                                    style={{ width: '100%', marginTop: '6px' }}
+                                />
+                            </label>
+
+                            <label>
+                                <strong>Опыт работы</strong>
+
+                                <input
+                                    name="experience"
+                                    placeholder="Например: 3 года"
+                                    value={form.experience}
+                                    onChange={handleChange}
+                                    style={{ width: '100%', marginTop: '6px' }}
+                                />
+                            </label>
+
+                            <div
+                                style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                                    gap: '12px'
+                                }}
+                            >
+                                <label>
+                                    <strong>Telegram</strong>
+
+                                    <input
+                                        name="telegram"
+                                        placeholder="https://t.me/..."
+                                        value={form.telegram}
+                                        onChange={handleChange}
+                                        style={{ width: '100%', marginTop: '6px' }}
+                                    />
+                                </label>
+
+                                <label>
+                                    <strong>YouTube</strong>
+
+                                    <input
+                                        name="youtube"
+                                        placeholder="https://youtube.com/..."
+                                        value={form.youtube}
+                                        onChange={handleChange}
+                                        style={{ width: '100%', marginTop: '6px' }}
+                                    />
+                                </label>
+
+                                <label>
+                                    <strong>Instagram</strong>
+
+                                    <input
+                                        name="instagram"
+                                        placeholder="https://instagram.com/..."
+                                        value={form.instagram}
+                                        onChange={handleChange}
+                                        style={{ width: '100%', marginTop: '6px' }}
+                                    />
+                                </label>
+                            </div>
+                        </>
+                    )}
 
                     <button type="submit">
                         Сохранить профиль

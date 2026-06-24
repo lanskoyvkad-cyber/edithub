@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 
 function Editors() {
   const [editors, setEditors] = useState([]);
   const [search, setSearch] = useState('');
+  const [city, setCity] = useState('');
+  const [videoType, setVideoType] = useState('');
+  const [software, setSoftware] = useState('');
   const [sort, setSort] = useState('rating');
 
   const loadEditors = async () => {
@@ -21,27 +24,90 @@ function Editors() {
     loadEditors();
   }, []);
 
+  const splitValues = (value) => {
+    if (!value) return [];
+
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  };
+
+  const cities = useMemo(() => {
+    return [...new Set(editors.map((editor) => editor.city).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b));
+  }, [editors]);
+
+  const videoTypes = useMemo(() => {
+    return [
+      ...new Set(
+        editors.flatMap((editor) => splitValues(editor.video_types))
+      )
+    ].sort((a, b) => a.localeCompare(b));
+  }, [editors]);
+
+  const softwareList = useMemo(() => {
+    return [
+      ...new Set(
+        editors.flatMap((editor) => splitValues(editor.software))
+      )
+    ].sort((a, b) => a.localeCompare(b));
+  }, [editors]);
+
+  const resetFilters = () => {
+    setSearch('');
+    setCity('');
+    setVideoType('');
+    setSoftware('');
+    setSort('rating');
+  };
+
   const filteredEditors = editors
     .filter((editor) => {
       const text = `
         ${editor.full_name || ''}
         ${editor.city || ''}
         ${editor.bio || ''}
+        ${editor.skills || ''}
+        ${editor.software || ''}
+        ${editor.video_types || ''}
+        ${editor.experience || ''}
       `.toLowerCase();
 
-      return text.includes(search.toLowerCase());
+      const matchesSearch = text.includes(search.toLowerCase());
+      const matchesCity = city ? editor.city === city : true;
+
+      const matchesVideoType = videoType
+        ? splitValues(editor.video_types).includes(videoType)
+        : true;
+
+      const matchesSoftware = software
+        ? splitValues(editor.software).includes(software)
+        : true;
+
+      return matchesSearch && matchesCity && matchesVideoType && matchesSoftware;
     })
     .sort((a, b) => {
+      const ratingA = Number(a.average_rating) || 0;
+      const ratingB = Number(b.average_rating) || 0;
+
+      const reviewsA = Number(a.reviews_count) || 0;
+      const reviewsB = Number(b.reviews_count) || 0;
+
       if (sort === 'rating') {
-        return Number(b.average_rating) - Number(a.average_rating);
+        return ratingB - ratingA;
       }
 
       if (sort === 'reviews') {
-        return Number(b.reviews_count) - Number(a.reviews_count);
+        return reviewsB - reviewsA;
       }
 
       if (sort === 'name') {
         return (a.full_name || '').localeCompare(b.full_name || '');
+      }
+
+      if (sort === 'city') {
+        return (a.city || '').localeCompare(b.city || '');
       }
 
       return 0;
@@ -61,7 +127,7 @@ function Editors() {
         }}
       >
         <input
-          placeholder="Поиск по имени, городу или описанию"
+          placeholder="Поиск по имени, городу, навыкам или описанию"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{
@@ -71,14 +137,59 @@ function Editors() {
         />
 
         <select
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+        >
+          <option value="">Все города</option>
+          {cities.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={videoType}
+          onChange={(e) => setVideoType(e.target.value)}
+        >
+          <option value="">Все типы видео</option>
+          {videoTypes.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={software}
+          onChange={(e) => setSoftware(e.target.value)}
+        >
+          <option value="">Все программы</option>
+          {softwareList.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </select>
+
+        <select
           value={sort}
           onChange={(e) => setSort(e.target.value)}
         >
           <option value="rating">Сначала высокий рейтинг</option>
           <option value="reviews">Сначала больше отзывов</option>
           <option value="name">По имени</option>
+          <option value="city">По городу</option>
         </select>
+
+        <button type="button" onClick={resetFilters}>
+          Сбросить
+        </button>
       </div>
+
+      <p className="empty-text">
+        Найдено монтажёров: {filteredEditors.length}
+      </p>
 
       {filteredEditors.length === 0 ? (
         <p className="empty-text">Монтажёры не найдены.</p>
@@ -146,12 +257,18 @@ function Editors() {
                 }}
               >
                 <span className="status status-progress">
-                  ⭐ {editor.average_rating || 0} / 5
+                  ⭐ {Number(editor.average_rating || 0).toFixed(1)} / 5
                 </span>
 
                 <span className="status status-open">
                   Отзывов: {editor.reviews_count || 0}
                 </span>
+
+                {editor.experience && (
+                  <span className="status status-completed">
+                    Опыт: {editor.experience}
+                  </span>
+                )}
               </div>
 
               {editor.bio ? (
@@ -163,6 +280,24 @@ function Editors() {
               ) : (
                 <p className="empty-text">
                   Монтажёр пока не добавил описание.
+                </p>
+              )}
+
+              {editor.skills && (
+                <p>
+                  <strong>Навыки:</strong> {editor.skills}
+                </p>
+              )}
+
+              {editor.software && (
+                <p>
+                  <strong>Программы:</strong> {editor.software}
+                </p>
+              )}
+
+              {editor.video_types && (
+                <p>
+                  <strong>Типы видео:</strong> {editor.video_types}
                 </p>
               )}
 
