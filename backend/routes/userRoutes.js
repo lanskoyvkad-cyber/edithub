@@ -23,6 +23,10 @@ router.put('/profile', authMiddleware, userController.updateProfile);
 router.get('/editors', userController.getEditors);
 router.get('/editor/:id', userController.getEditorProfile);
 
+router.get('/favorites', authMiddleware, userController.getFavoriteEditors);
+router.post('/favorites/:editorId', authMiddleware, userController.addFavoriteEditor);
+router.delete('/favorites/:editorId', authMiddleware, userController.removeFavoriteEditor);
+
 router.patch('/:id/role', authMiddleware, adminOnly, userController.updateUserRole);
 
 router.delete('/:id', authMiddleware, adminOnly, userController.deleteUser);

@@ -373,3 +373,137 @@ exports.getEditors = async (req, res) => {
     });
   }
 };
+
+exports.addFavoriteEditor = async (req, res) => {
+  try {
+    const clientId = req.user.user_id;
+    const { editorId } = req.params;
+
+    if (req.user.role !== 'CLIENT') {
+      return res.status(403).json({
+        message: 'Добавлять в избранное может только заказчик'
+      });
+    }
+
+    const editorResult = await pool.query(
+      `
+      SELECT user_id
+      FROM users
+      WHERE user_id = $1 AND role = 'EDITOR'
+      `,
+      [editorId]
+    );
+
+    if (editorResult.rows.length === 0) {
+      return res.status(404).json({
+        message: 'Монтажёр не найден'
+      });
+    }
+
+    await pool.query(
+      `
+      INSERT INTO favorites (client_id, editor_id)
+      VALUES ($1, $2)
+      ON CONFLICT (client_id, editor_id) DO NOTHING
+      `,
+      [clientId, editorId]
+    );
+
+    res.json({
+      message: 'Монтажёр добавлен в избранное'
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: 'Ошибка добавления в избранное'
+    });
+  }
+};
+
+exports.removeFavoriteEditor = async (req, res) => {
+  try {
+    const clientId = req.user.user_id;
+    const { editorId } = req.params;
+
+    if (req.user.role !== 'CLIENT') {
+      return res.status(403).json({
+        message: 'Удалять из избранного может только заказчик'
+      });
+    }
+
+    await pool.query(
+      `
+      DELETE FROM favorites
+      WHERE client_id = $1 AND editor_id = $2
+      `,
+      [clientId, editorId]
+    );
+
+    res.json({
+      message: 'Монтажёр удалён из избранного'
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: 'Ошибка удаления из избранного'
+    });
+  }
+};
+
+exports.getFavoriteEditors = async (req, res) => {
+  try {
+    const clientId = req.user.user_id;
+
+    if (req.user.role !== 'CLIENT') {
+      return res.status(403).json({
+        message: 'Избранное доступно только заказчику'
+      });
+    }
+
+    const result = await pool.query(
+      `
+      SELECT 
+        u.user_id,
+        u.full_name,
+        u.city,
+        u.avatar,
+        u.bio,
+        u.skills,
+        u.software,
+        u.video_types,
+        u.experience,
+        COALESCE(ROUND(AVG(r.rating)::numeric, 1), 0) AS average_rating,
+        COUNT(r.review_id)::int AS reviews_count
+      FROM favorites f
+      JOIN users u ON f.editor_id = u.user_id
+      LEFT JOIN reviews r ON r.editor_id = u.user_id
+      WHERE f.client_id = $1
+      GROUP BY 
+        u.user_id,
+        u.full_name,
+        u.city,
+        u.avatar,
+        u.bio,
+        u.skills,
+        u.software,
+        u.video_types,
+        u.experience,
+        f.created_at
+      ORDER BY f.created_at DESC
+      `,
+      [clientId]
+    );
+
+    res.json({
+      editors: result.rows
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: 'Ошибка получения избранных монтажёров'
+    });
+  }
+};
