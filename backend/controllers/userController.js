@@ -410,9 +410,9 @@ exports.addFavoriteEditor = async (req, res) => {
     );
     await pool.query(
       `
-  INSERT INTO notifications (user_id, title, message)
-  VALUES ($1, $2, $3)
-  `,
+      INSERT INTO notifications (user_id, title, message)
+      VALUES ($1, $2, $3)
+      `,
       [
         editorId,
         'Вас добавили в избранное',

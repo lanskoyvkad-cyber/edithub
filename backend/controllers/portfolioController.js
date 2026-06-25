@@ -121,17 +121,17 @@ exports.deletePortfolioItem = async (req, res) => {
 };
 
 exports.updatePortfolioItem = async (req, res) => {
-  try {
-    const { id } = req.params;
+    try {
+        const { id } = req.params;
 
-    const {
-      title,
-      description,
-      video_url
-    } = req.body;
+        const {
+            title,
+            description,
+            video_url
+        } = req.body;
 
-    const result = await pool.query(
-      `
+        const result = await pool.query(
+            `
       UPDATE portfolio
       SET
         title = $1,
@@ -141,31 +141,31 @@ exports.updatePortfolioItem = async (req, res) => {
       AND user_id = $5
       RETURNING *
       `,
-      [
-        title,
-        description,
-        video_url,
-        id,
-        req.user.user_id
-      ]
-    );
+            [
+                title,
+                description,
+                video_url,
+                id,
+                req.user.user_id
+            ]
+        );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        message: 'Работа не найдена'
-      });
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                message: 'Работа не найдена'
+            });
+        }
+
+        res.json({
+            message: 'Работа обновлена',
+            item: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).json({
+            message: 'Ошибка обновления работы'
+        });
     }
-
-    res.json({
-      message: 'Работа обновлена',
-      item: result.rows[0]
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      message: 'Ошибка обновления работы'
-    });
-  }
 };

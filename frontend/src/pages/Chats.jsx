@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 
@@ -7,8 +7,12 @@ function Chats() {
   const [selectedChat, setSelectedChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [unreadByChat, setUnreadByChat] = useState({});
 
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const shouldScrollToBottomRef = useRef(false);
 
   const [searchParams] = useSearchParams();
 
@@ -22,9 +26,113 @@ function Chats() {
     (chat) => Number(chat.chat_id) === Number(selectedChat)
   );
 
+  const isMessagesScrolledToBottom = () => {
+    const container = messagesContainerRef.current;
+
+    if (!container) return true;
+
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+
+    return distanceFromBottom < 80;
+  };
+
+  const jumpMessagesToBottom = () => {
+    const container = messagesContainerRef.current;
+
+    if (!container) return;
+
+    container.scrollTop = container.scrollHeight;
+  };
+
+  const getFileUrl = (fileUrl) => {
+    if (!fileUrl) return '';
+
+    if (fileUrl.startsWith('http')) {
+      return fileUrl;
+    }
+
+    const backendUrl = api.defaults.baseURL.replace('/api', '');
+
+    return `${backendUrl}${fileUrl}`;
+  };
+
+  const isImageFile = (fileType) => {
+    return fileType?.startsWith('image/');
+  };
+
+  const isVideoFile = (fileType) => {
+    return fileType?.startsWith('video/');
+  };
+
+  const formatDateTime = (date) => {
+    if (!date) return '';
+
+    return new Date(date).toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const loadUnreadChatNotifications = async () => {
+    try {
+      const response = await api.get('/notifications', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const counts = {};
+
+      (response.data.notifications || []).forEach((item) => {
+        if (
+          !item.is_read &&
+          item.title === 'Новое сообщение' &&
+          item.chat_id
+        ) {
+          const chatId = Number(item.chat_id);
+          counts[chatId] = (counts[chatId] || 0) + 1;
+        }
+      });
+
+      setUnreadByChat(counts);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const markChatAsRead = async (chatId) => {
+    try {
+      await api.patch(
+        `/chats/${chatId}/read`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      setUnreadByChat((prev) => {
+        const updated = { ...prev };
+        delete updated[Number(chatId)];
+        return updated;
+      });
+
+      window.dispatchEvent(new Event('notifications-updated'));
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   const loadMessages = async (chatId) => {
     try {
       setSelectedChat(Number(chatId));
+
+      await markChatAsRead(chatId);
 
       const response = await api.get(`/chats/${chatId}/messages`, {
         headers: {
@@ -32,13 +140,30 @@ function Chats() {
         }
       });
 
+      shouldScrollToBottomRef.current = true;
       setMessages(response.data.messages || []);
+
     } catch (error) {
       console.error(error);
       alert(
         error.response?.data?.message ||
         'Ошибка загрузки сообщений'
       );
+    }
+  };
+
+  const refreshMessages = async (chatId) => {
+    try {
+      const response = await api.get(`/chats/${chatId}/messages`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      setMessages(response.data.messages || []);
+
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -54,9 +179,7 @@ function Chats() {
 
       setChats(loadedChats);
 
-      if (chatIdFromUrl) {
-        loadMessages(chatIdFromUrl);
-      }
+      await loadUnreadChatNotifications();
     } catch (error) {
       console.error(error);
       alert(
@@ -69,23 +192,45 @@ function Chats() {
   const sendMessage = async (e) => {
     e.preventDefault();
 
-    if (!message.trim() || !selectedChat) return;
+    if (!message.trim() && !selectedFile) return;
+    if (!selectedChat) return;
 
     try {
-      await api.post(
-        `/chats/${selectedChat}/messages`,
-        {
-          message
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
+      if (selectedFile) {
+        const formData = new FormData();
+
+        formData.append('file', selectedFile);
+        formData.append('message', message);
+
+        await api.post(
+          `/chats/${selectedChat}/files`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
           }
-        }
-      );
+        );
+      } else {
+        await api.post(
+          `/chats/${selectedChat}/messages`,
+          {
+            message
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+      }
 
       setMessage('');
-      loadMessages(selectedChat);
+      setSelectedFile(null);
+
+      await loadMessages(selectedChat);
+      await loadChats();
+
     } catch (error) {
       console.error(error);
       alert(
@@ -97,10 +242,38 @@ function Chats() {
 
   useEffect(() => {
     loadChats();
-  }, [chatIdFromUrl]);
+  }, []);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (chatIdFromUrl && !selectedChat) {
+      loadMessages(chatIdFromUrl);
+    }
+  }, [chatIdFromUrl, selectedChat]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadChats();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedChat) return;
+
+    const interval = setInterval(() => {
+      refreshMessages(selectedChat);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [selectedChat]);
+
+  useLayoutEffect(() => {
+    if (!shouldScrollToBottomRef.current) return;
+
+    shouldScrollToBottomRef.current = false;
+
+    jumpMessagesToBottom();
   }, [messages]);
 
   return (
@@ -129,6 +302,7 @@ function Chats() {
           ) : (
             chats.map((chat) => {
               const isActive = Number(selectedChat) === Number(chat.chat_id);
+              const unreadCount = unreadByChat[Number(chat.chat_id)] || 0;
 
               return (
                 <div
@@ -155,6 +329,63 @@ function Chats() {
                     <strong>Монтажёр:</strong>{' '}
                     {chat.editor_name || 'Не указан'}
                   </p>
+                  {chat.last_message ? (
+                    <div style={{ marginTop: '10px' }}>
+                      <p
+                        className="empty-text"
+                        style={{
+                          margin: '0 0 4px',
+                          fontSize: '13px'
+                        }}
+                      >
+                        <strong>Последнее:</strong>{' '}
+                        {chat.last_sender_name || 'Пользователь'}:{' '}
+                        {chat.last_message.length > 45
+                          ? chat.last_message.slice(0, 45) + '...'
+                          : chat.last_message}
+                      </p>
+
+                      <p
+                        className="empty-text"
+                        style={{
+                          margin: 0,
+                          fontSize: '12px'
+                        }}
+                      >
+                        {formatDateTime(chat.last_message_at)}
+                      </p>
+                    </div>
+                  ) : (
+                    <p
+                      className="empty-text"
+                      style={{
+                        marginTop: '10px',
+                        fontSize: '13px'
+                      }}
+                    >
+                      Сообщений пока нет
+                    </p>
+                  )}
+                  {unreadCount > 0 && (
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginTop: '10px',
+                        minWidth: '24px',
+                        height: '24px',
+                        padding: '0 8px',
+                        borderRadius: '999px',
+                        background: '#dc2626',
+                        color: '#ffffff',
+                        fontSize: '13px',
+                        fontWeight: '700'
+                      }}
+                    >
+                      Новых: {unreadCount}
+                    </span>
+                  )}
                 </div>
               );
             })
@@ -205,6 +436,7 @@ function Chats() {
           {selectedChat && (
             <>
               <div
+                ref={messagesContainerRef}
                 style={{
                   flex: 1,
                   minHeight: 0,
@@ -234,7 +466,7 @@ function Chats() {
                       >
                         <div
                           style={{
-                            maxWidth: '70%',
+                            maxWidth: msg.file_url ? '280px' : '70%',
                             background: isMine ? '#2563eb' : '#1f2937',
                             border: '1px solid #374151',
                             borderRadius: '14px',
@@ -252,9 +484,70 @@ function Chats() {
                             {msg.sender_name || 'Пользователь'}
                           </div>
 
-                          <div>
-                            {msg.message}
-                          </div>
+                          {msg.message && msg.message !== 'Файл' && (
+                            <div>
+                              {msg.message}
+                            </div>
+                          )}
+
+                          {msg.file_url && (
+                            <div style={{ marginTop: msg.message && msg.message !== 'Файл' ? '10px' : 0 }}>
+                              {isImageFile(msg.file_type) && (
+                                <img
+                                  src={getFileUrl(msg.file_url)}
+                                  alt={msg.file_name || 'Файл'}
+                                  style={{
+                                    maxWidth: '100%',
+                                    borderRadius: '10px',
+                                    marginBottom: '8px'
+                                  }}
+                                />
+                              )}
+
+                              {isVideoFile(msg.file_type) && (
+                                <video
+                                  controls
+                                  src={getFileUrl(msg.file_url)}
+                                  style={{
+                                    width: '220px',
+                                    aspectRatio: '9 / 16',
+                                    maxWidth: '100%',
+                                    borderRadius: '10px',
+                                    marginBottom: '8px',
+                                    background: '#000',
+                                    objectFit: 'cover'
+                                  }}
+                                />
+                              )}
+
+                              <a
+                                href={getFileUrl(msg.file_url)}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  color: '#bfdbfe',
+                                  fontWeight: '700'
+                                }}
+                              >
+                                  {msg.file_name?.length > 28
+                                  ? msg.file_name.slice(0, 28) + '...'
+                                  : msg.file_name || 'Скачать файл'}
+                              </a>
+                            </div>
+                          )}
+
+                          {isMine && (
+                            <div
+                              style={{
+                                fontSize: '11px',
+                                color: '#bfdbfe',
+                                marginTop: '6px',
+                                textAlign: 'right'
+                              }}
+                            >
+                              {msg.is_read ? 'Прочитано' : 'Отправлено'}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -283,10 +576,36 @@ function Chats() {
                   }}
                 />
 
+                <label
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0 12px',
+                    borderRadius: '8px',
+                    background: '#374151',
+                    cursor: 'pointer',
+                    color: '#ffffff',
+                    fontWeight: '700'
+                  }}
+                >
+                  📎
+                  <input
+                    type="file"
+                    onChange={(e) => setSelectedFile(e.target.files[0] || null)}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+
                 <button type="submit">
                   Отправить
                 </button>
               </form>
+              {selectedFile && (
+                <p className="empty-text" style={{ marginTop: '8px' }}>
+                  Выбран файл: {selectedFile.name}
+                </p>
+              )}
             </>
           )}
         </div>

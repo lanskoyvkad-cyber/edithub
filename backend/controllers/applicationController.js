@@ -4,6 +4,26 @@ exports.createApplication = async (req, res) => {
     try {
         const { order_id, message } = req.body;
 
+        const orderResult = await pool.query(
+            `
+            SELECT 
+                order_id,
+                title,
+                user_id AS client_id
+            FROM orders
+            WHERE order_id = $1
+            `,
+            [order_id]
+        );
+
+        if (orderResult.rows.length === 0) {
+            return res.status(404).json({
+                message: 'Заказ не найден'
+            });
+        }
+
+        const order = orderResult.rows[0];
+
         const result = await pool.query(
             `
             INSERT INTO applications
@@ -15,6 +35,18 @@ exports.createApplication = async (req, res) => {
                 order_id,
                 req.user.user_id,
                 message
+            ]
+        );
+
+        await pool.query(
+            `
+            INSERT INTO notifications (user_id, title, message)
+            VALUES ($1, $2, $3)
+            `,
+            [
+                order.client_id,
+                'Новый отклик на заказ',
+                `На ваш заказ "${order.title}" поступил новый отклик.`
             ]
         );
 
@@ -75,13 +107,14 @@ exports.updateApplicationStatus = async (req, res) => {
 
         const applicationResult = await client.query(
             `
-      SELECT 
-        a.*,
-        o.user_id AS order_owner_id
-      FROM applications a
-      JOIN orders o ON a.order_id = o.order_id
-      WHERE a.application_id = $1
-      `,
+            SELECT 
+                a.*,
+                o.user_id AS order_owner_id,
+                o.title AS order_title
+            FROM applications a
+            JOIN orders o ON a.order_id = o.order_id
+            WHERE a.application_id = $1
+            `,
             [id]
         );
 
@@ -133,6 +166,7 @@ exports.updateApplicationStatus = async (req, res) => {
                 `,
                 [application.order_id, id]
             );
+
             await client.query(
                 `
                 INSERT INTO chats (client_id, editor_id)
@@ -140,6 +174,32 @@ exports.updateApplicationStatus = async (req, res) => {
                 ON CONFLICT DO NOTHING
                 `,
                 [application.order_owner_id, application.user_id]
+            );
+
+            await client.query(
+                `
+                INSERT INTO notifications (user_id, title, message)
+                VALUES ($1, $2, $3)
+                `,
+                [
+                    application.user_id,
+                    'Ваш отклик принят',
+                    `Заказчик принял ваш отклик на заказ "${application.order_title}". Заказ перешёл в работу.`
+                ]
+            );
+        }
+
+        if (status === 'REJECTED') {
+            await client.query(
+                `
+                INSERT INTO notifications (user_id, title, message)
+                VALUES ($1, $2, $3)
+                `,
+                [
+                    application.user_id,
+                    'Ваш отклик отклонён',
+                    `Ваш отклик на заказ "${application.order_title}" был отклонён.`
+                ]
             );
         }
 

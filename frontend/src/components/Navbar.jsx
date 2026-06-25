@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import api from '../services/api';
 
 function Navbar() {
   const navigate = useNavigate();
@@ -8,6 +10,59 @@ function Navbar() {
 
   const savedUser = localStorage.getItem('user');
   const user = savedUser ? JSON.parse(savedUser) : null;
+
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+
+  const loadUnreadChatNotifications = async () => {
+    if (!token) {
+      setUnreadChatCount(0);
+      return;
+    }
+
+    try {
+      const response = await api.get('/notifications', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const unreadMessages = (response.data.notifications || []).filter(
+        (item) =>
+          !item.is_read &&
+          item.title === 'Новое сообщение' &&
+          item.chat_id
+      );
+
+      const uniqueChatIds = [
+        ...new Set(
+          unreadMessages.map((item) => Number(item.chat_id))
+        )
+      ];
+
+      setUnreadChatCount(uniqueChatIds.length);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    loadUnreadChatNotifications();
+
+    const handleNotificationsUpdate = () => {
+      loadUnreadChatNotifications();
+    };
+
+    window.addEventListener('notifications-updated', handleNotificationsUpdate);
+
+    const interval = setInterval(() => {
+      loadUnreadChatNotifications();
+    }, 10000);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('notifications-updated', handleNotificationsUpdate);
+    };
+  }, [token, location.pathname]);
 
   const logout = () => {
     localStorage.removeItem('token');
@@ -35,6 +90,40 @@ function Navbar() {
       color: active ? '#ffffff' : '#e5e7eb'
     };
   };
+
+  const renderChatsLink = () => (
+    <Link
+      to="/chats"
+      style={{
+        ...navLinkStyle('/chats'),
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px'
+      }}
+    >
+      Чаты
+
+      {unreadChatCount > 0 && (
+        <span
+          style={{
+            minWidth: '20px',
+            height: '20px',
+            padding: '0 6px',
+            borderRadius: '999px',
+            background: '#dc2626',
+            color: '#ffffff',
+            fontSize: '12px',
+            fontWeight: '700',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          {unreadChatCount}
+        </span>
+      )}
+    </Link>
+  );
 
   const renderGuestLinks = () => (
     <>
@@ -78,9 +167,7 @@ function Navbar() {
         Создать заказ
       </Link>
 
-      <Link to="/chats" style={navLinkStyle('/chats')}>
-        Чаты
-      </Link>
+      {renderChatsLink()}
 
       <Link to="/profile" style={navLinkStyle('/profile')}>
         Профиль
@@ -98,9 +185,7 @@ function Navbar() {
         Мои отклики
       </Link>
 
-      <Link to="/chats" style={navLinkStyle('/chats')}>
-        Чаты
-      </Link>
+      {renderChatsLink()}
 
       <Link to="/profile" style={navLinkStyle('/profile')}>
         Профиль
@@ -161,7 +246,7 @@ function Navbar() {
         <Link to="/" style={navLinkStyle('/', true)}>
           Главная
         </Link>
-        
+
         {token && (
           <Link to="/notifications" style={navLinkStyle('/notifications')}>
             Уведомления

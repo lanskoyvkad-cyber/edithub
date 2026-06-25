@@ -15,9 +15,9 @@ router.post(
 );
 
 router.get(
-  '/my',
-  authMiddleware,
-  applicationController.getMyApplications
+    '/my',
+    authMiddleware,
+    applicationController.getMyApplications
 );
 
 router.get(
