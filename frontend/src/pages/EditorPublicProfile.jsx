@@ -16,6 +16,9 @@ function EditorPublicProfile() {
     const [averageRating, setAverageRating] = useState(0);
 
     const [activeTab, setActiveTab] = useState('services');
+    const [showComplaintForm, setShowComplaintForm] = useState(false);
+    const [complaintReason, setComplaintReason] = useState('');
+    const [complaintDescription, setComplaintDescription] = useState('');
 
     const tabButtonStyle = (tabName) => ({
         background: activeTab === tabName ? '#2563eb' : '#374151'
@@ -134,6 +137,50 @@ function EditorPublicProfile() {
             alert(
                 error.response?.data?.message ||
                 'Ошибка создания чата'
+            );
+        }
+    };
+
+    const sendComplaint = async (e) => {
+        e.preventDefault();
+
+        if (!token) {
+            alert('Для отправки жалобы необходимо войти в аккаунт');
+            return;
+        }
+
+        if (!complaintReason.trim()) {
+            alert('Укажите причину жалобы');
+            return;
+        }
+
+        try {
+            await api.post(
+                '/complaints',
+                {
+                    target_type: 'USER',
+                    target_id: Number(id),
+                    reason: complaintReason,
+                    description: complaintDescription
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+
+            alert('Жалоба отправлена');
+
+            setComplaintReason('');
+            setComplaintDescription('');
+            setShowComplaintForm(false);
+
+        } catch (error) {
+            console.error(error);
+            alert(
+                error.response?.data?.message ||
+                'Ошибка отправки жалобы'
             );
         }
     };
@@ -302,12 +349,95 @@ function EditorPublicProfile() {
                     </div>
 
                     {user?.role === 'CLIENT' && (
-                        <button
-                            onClick={startChat}
-                            style={{ marginTop: '15px' }}
+                        <div
+                            style={{
+                                display: 'flex',
+                                gap: '10px',
+                                flexWrap: 'wrap',
+                                marginTop: '15px'
+                            }}
                         >
-                            Написать сообщение
-                        </button>
+                            <button onClick={startChat}>
+                                Написать сообщение
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setShowComplaintForm(!showComplaintForm)}
+                                style={{ background: '#b45309' }}
+                            >
+                                Пожаловаться
+                            </button>
+                        </div>
+                    )}
+                    {showComplaintForm && (
+                        <div
+                            className="card"
+                            style={{
+                                marginTop: '15px',
+                                maxWidth: '600px'
+                            }}
+                        >
+                            <h3 style={{ marginTop: 0 }}>
+                                Жалоба на монтажёра
+                            </h3>
+
+                            <form
+                                onSubmit={sendComplaint}
+                                style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '12px'
+                                }}
+                            >
+                                <select
+                                    value={complaintReason}
+                                    onChange={(e) => setComplaintReason(e.target.value)}
+                                    required
+                                >
+                                    <option value="">Выберите причину</option>
+                                    <option value="Неподходящее поведение">
+                                        Неподходящее поведение
+                                    </option>
+                                    <option value="Спам или реклама">
+                                        Спам или реклама
+                                    </option>
+                                    <option value="Недостоверная информация">
+                                        Недостоверная информация
+                                    </option>
+                                    <option value="Оскорбления">
+                                        Оскорбления
+                                    </option>
+                                    <option value="Другое">
+                                        Другое
+                                    </option>
+                                </select>
+
+                                <textarea
+                                    placeholder="Опишите проблему подробнее"
+                                    value={complaintDescription}
+                                    onChange={(e) => setComplaintDescription(e.target.value)}
+                                    rows="4"
+                                />
+
+                                <div>
+                                    <button type="submit">
+                                        Отправить жалобу
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowComplaintForm(false)}
+                                        style={{
+                                            marginLeft: '10px',
+                                            background: '#374151'
+                                        }}
+                                    >
+                                        Отмена
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     )}
                 </div>
             </div>

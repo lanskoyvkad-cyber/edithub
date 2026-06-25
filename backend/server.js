@@ -13,6 +13,7 @@ const reviewRoutes = require('./routes/reviewRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const userRoutes = require('./routes/userRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const complaintRoutes = require('./routes/complaintRoutes');
 const app = express();
 const path = require('path');
 
@@ -29,6 +30,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/complaints', complaintRoutes);
 
 app.get('/', (req, res) => {
   res.json({

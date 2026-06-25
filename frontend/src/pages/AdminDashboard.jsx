@@ -123,6 +123,10 @@ function AdminDashboard() {
               Отзывы
             </button>
           </Link>
+
+          <Link to="/admin/complaints">
+            <button>Жалобы</button>
+          </Link>
         </div>
       </div>
 

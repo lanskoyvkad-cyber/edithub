@@ -21,6 +21,7 @@ import OrderDetails from './pages/OrderDetails';
 import AdminUsers from './pages/AdminUsers';
 import AdminOrders from './pages/AdminOrders';
 import AdminReviews from './pages/AdminReviews';
+import AdminComplaints from './pages/AdminComplaints';
 
 import EditorReviews from './pages/EditorReviews';
 import Profile from './pages/Profile';
@@ -472,6 +473,15 @@ function App() {
           element={
             <ProtectedRoute roles={['ADMIN']}>
               <AdminReviews />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/complaints"
+          element={
+            <ProtectedRoute roles={['ADMIN']}>
+              <AdminComplaints />
             </ProtectedRoute>
           }
         />

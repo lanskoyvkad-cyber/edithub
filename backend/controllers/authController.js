@@ -94,6 +94,12 @@ exports.login = async (req, res) => {
 
         const user = result.rows[0];
 
+        if (user.is_blocked) {
+            return res.status(403).json({
+                message: 'Ваш аккаунт заблокирован администратором'
+            });
+        }
+
         const isPasswordValid = await bcrypt.compare(
             password,
             user.password

@@ -10,6 +10,10 @@ function Chats() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [unreadByChat, setUnreadByChat] = useState({});
 
+  const [complaintMessageId, setComplaintMessageId] = useState(null);
+  const [complaintReason, setComplaintReason] = useState('');
+  const [complaintDescription, setComplaintDescription] = useState('');
+
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const shouldScrollToBottomRef = useRef(false);
@@ -236,6 +240,50 @@ function Chats() {
       alert(
         error.response?.data?.message ||
         'Ошибка отправки сообщения'
+      );
+    }
+  };
+
+  const sendMessageComplaint = async (e) => {
+    e.preventDefault();
+
+    if (!complaintMessageId) {
+      alert('Сообщение для жалобы не выбрано');
+      return;
+    }
+
+    if (!complaintReason.trim()) {
+      alert('Выберите причину жалобы');
+      return;
+    }
+
+    try {
+      await api.post(
+        '/complaints',
+        {
+          target_type: 'MESSAGE',
+          target_id: Number(complaintMessageId),
+          reason: complaintReason,
+          description: complaintDescription
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      alert('Жалоба на сообщение отправлена');
+
+      setComplaintMessageId(null);
+      setComplaintReason('');
+      setComplaintDescription('');
+
+    } catch (error) {
+      console.error(error);
+      alert(
+        error.response?.data?.message ||
+        'Ошибка отправки жалобы'
       );
     }
   };
@@ -529,7 +577,7 @@ function Chats() {
                                   fontWeight: '700'
                                 }}
                               >
-                                  {msg.file_name?.length > 28
+                                {msg.file_name?.length > 28
                                   ? msg.file_name.slice(0, 28) + '...'
                                   : msg.file_name || 'Скачать файл'}
                               </a>
@@ -547,6 +595,97 @@ function Chats() {
                             >
                               {msg.is_read ? 'Прочитано' : 'Отправлено'}
                             </div>
+                          )}
+                          {!isMine && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setComplaintMessageId(Number(msg.message_id));
+                                setComplaintReason('');
+                                setComplaintDescription('');
+                              }}
+                              style={{
+                                marginTop: '8px',
+                                padding: '4px 8px',
+                                fontSize: '11px',
+                                background: '#b45309'
+                              }}
+                            >
+                              Пожаловаться
+                            </button>
+                          )}
+                          {complaintMessageId === Number(msg.message_id) && (
+                            <form
+                              onSubmit={sendMessageComplaint}
+                              style={{
+                                marginTop: '10px',
+                                paddingTop: '10px',
+                                borderTop: '1px solid #4b5563',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '8px'
+                              }}
+                            >
+                              <select
+                                value={complaintReason}
+                                onChange={(e) => setComplaintReason(e.target.value)}
+                                required
+                                style={{
+                                  fontSize: '13px'
+                                }}
+                              >
+                                <option value="">Причина жалобы</option>
+                                <option value="Оскорбление">Оскорбление</option>
+                                <option value="Спам">Спам</option>
+                                <option value="Мошенничество">Мошенничество</option>
+                                <option value="Неподходящий контент">Неподходящий контент</option>
+                                <option value="Другое">Другое</option>
+                              </select>
+
+                              <textarea
+                                placeholder="Комментарий к жалобе"
+                                value={complaintDescription}
+                                onChange={(e) => setComplaintDescription(e.target.value)}
+                                rows="3"
+                                style={{
+                                  fontSize: '13px'
+                                }}
+                              />
+
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  gap: '8px',
+                                  flexWrap: 'wrap'
+                                }}
+                              >
+                                <button
+                                  type="submit"
+                                  style={{
+                                    padding: '5px 9px',
+                                    fontSize: '12px'
+                                  }}
+                                >
+                                  Отправить
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setComplaintMessageId(null);
+                                    setComplaintReason('');
+                                    setComplaintDescription('');
+                                  }}
+                                  style={{
+                                    padding: '5px 9px',
+                                    fontSize: '12px',
+                                    background: '#374151'
+                                  }}
+                                >
+                                  Отмена
+                                </button>
+                              </div>
+                            </form>
                           )}
                         </div>
                       </div>
