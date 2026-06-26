@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { Link } from 'react-router-dom';
+import OrderFiles from '../components/OrderFiles';
 
 function MyOrders() {
   const [orders, setOrders] = useState([]);
@@ -311,88 +312,100 @@ function MyOrders() {
       </div>
 
       {editingOrder && (
-        <form
-          onSubmit={updateOrder}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-            maxWidth: '700px',
-            margin: '0 auto 25px'
-          }}
-        >
-          <h3 style={{ marginTop: 0 }}>
-            Редактировать заказ
-          </h3>
-
-          <input
-            name="title"
-            placeholder="Название"
-            value={form.title}
-            onChange={handleChange}
-            required
-          />
-
-          <textarea
-            name="description"
-            placeholder="Описание"
-            value={form.description}
-            onChange={handleChange}
-            rows="5"
-            required
-          />
-
-          <div
+        <>
+          <form
+            onSubmit={updateOrder}
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: '12px'
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              maxWidth: '700px',
+              margin: '0 auto 15px'
             }}
           >
+            <h3 style={{ marginTop: 0 }}>
+              Редактировать заказ
+            </h3>
+
             <input
-              name="budget"
-              type="number"
-              min="1"
-              placeholder="Бюджет"
-              value={form.budget}
+              name="title"
+              placeholder="Название"
+              value={form.title}
               onChange={handleChange}
               required
             />
 
-            <input
-              name="deadline"
-              type="date"
-              value={form.deadline}
+            <textarea
+              name="description"
+              placeholder="Описание"
+              value={form.description}
               onChange={handleChange}
+              rows="5"
               required
             />
-          </div>
 
-          <input
-            name="video_type"
-            placeholder="Тип видео"
-            value={form.video_type}
-            onChange={handleChange}
-            required
-          />
-
-          <div>
-            <button type="submit">
-              Сохранить изменения
-            </button>
-
-            <button
-              type="button"
-              onClick={cancelEdit}
+            <div
               style={{
-                marginLeft: '10px',
-                background: '#374151'
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: '12px'
               }}
             >
-              Отмена
-            </button>
+              <input
+                name="budget"
+                type="number"
+                min="1"
+                placeholder="Бюджет"
+                value={form.budget}
+                onChange={handleChange}
+                required
+              />
+
+              <input
+                name="deadline"
+                type="date"
+                value={form.deadline}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <input
+              name="video_type"
+              placeholder="Тип видео"
+              value={form.video_type}
+              onChange={handleChange}
+              required
+            />
+
+            <div>
+              <button type="submit">
+                Сохранить изменения
+              </button>
+
+              <button
+                type="button"
+                onClick={cancelEdit}
+                style={{
+                  marginLeft: '10px',
+                  background: '#374151'
+                }}
+              >
+                Отмена
+              </button>
+            </div>
+          </form>
+
+          <div
+            className="card"
+            style={{
+              maxWidth: '700px',
+              margin: '0 auto 25px'
+            }}
+          >
+            <OrderFiles orderId={editingOrder} canUpload={true} />
           </div>
-        </form>
+        </>
       )}
 
       {filteredOrders.length === 0 ? (
@@ -557,6 +570,8 @@ function MyOrders() {
                 Заказ завершён без выбранного исполнителя.
               </p>
             )}
+
+            <OrderFiles orderId={order.order_id} canUpload={false} />
           </div>
         ))
       )}

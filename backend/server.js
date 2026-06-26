@@ -14,6 +14,7 @@ const chatRoutes = require('./routes/chatRoutes');
 const userRoutes = require('./routes/userRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const complaintRoutes = require('./routes/complaintRoutes');
+const orderFileRoutes = require('./routes/orderFileRoutes');
 const app = express();
 const path = require('path');
 
@@ -31,6 +32,7 @@ app.use('/api/chats', chatRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/complaints', complaintRoutes);
+app.use('/api/order-files', orderFileRoutes);
 
 app.get('/', (req, res) => {
   res.json({

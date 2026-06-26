@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import OrderFiles from '../components/OrderFiles';
 import api from '../services/api';
 
 function OrderDetails() {
@@ -132,9 +133,19 @@ function OrderDetails() {
 
   const statusInfo = getOrderStatus(order.status);
 
+  const currentUserId = Number(user?.user_id || user?.id);
+  const orderClientId = Number(order.client_id || order.user_id);
+
   const isOrderOwner =
     user?.role === 'CLIENT' &&
-    Number(user?.user_id) === Number(order.user_id);
+    currentUserId === orderClientId;
+
+  const isAdmin = user?.role === 'ADMIN';
+
+  const canViewOrderFiles =
+    isOrderOwner ||
+    isAdmin ||
+    (user?.role === 'EDITOR' && order.status !== 'OPEN');
 
   return (
     <div className="page">
@@ -229,6 +240,12 @@ function OrderDetails() {
             Тип видео: {order.video_type || 'Не указан'}
           </span>
         </div>
+        {canViewOrderFiles && (
+          <OrderFiles
+            orderId={order.order_id || orderId}
+            canUpload={false}
+          />
+        )}
       </div>
 
       <div

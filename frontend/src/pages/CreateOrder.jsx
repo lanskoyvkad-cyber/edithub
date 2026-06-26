@@ -16,6 +16,9 @@ function CreateOrder() {
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const today = new Date().toISOString().split('T')[0];
 
   const handleChange = (e) => {
@@ -31,6 +34,8 @@ function CreateOrder() {
     const token = localStorage.getItem('token');
 
     try {
+      setIsSubmitting(true);
+
       const response = await api.post(
         '/orders',
         {
@@ -44,7 +49,35 @@ function CreateOrder() {
         }
       );
 
-      setMessage(response.data.message || 'Заказ успешно создан');
+      const createdOrder = response.data.order || response.data;
+      const orderId = createdOrder.order_id || response.data.order_id;
+
+      if (!orderId) {
+        throw new Error('Backend не вернул ID созданного заказа');
+      }
+
+      for (const file of selectedFiles) {
+        const formData = new FormData();
+
+        formData.append('file', file);
+
+        await api.post(
+          `/order-files/${orderId}`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+      }
+
+      setMessage(
+        selectedFiles.length > 0
+          ? 'Заказ успешно создан, файлы прикреплены'
+          : 'Заказ успешно создан'
+      );
+
       setIsSuccess(true);
 
       setForm({
@@ -55,13 +88,24 @@ function CreateOrder() {
         video_type: ''
       });
 
+      setSelectedFiles([]);
+
       setTimeout(() => {
         navigate('/my-orders');
       }, 1000);
 
     } catch (error) {
-      setMessage(error.response?.data?.message || 'Ошибка создания заказа');
+      console.error(error);
+
+      setMessage(
+        error.response?.data?.message ||
+        error.message ||
+        'Ошибка создания заказа'
+      );
+
       setIsSuccess(false);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -196,6 +240,103 @@ function CreateOrder() {
           </select>
         </label>
 
+        <label>
+          <strong>Файлы к заказу</strong>
+
+          <div style={{ marginTop: '8px' }}>
+            <label
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '9px 14px',
+                borderRadius: '8px',
+                background: '#2563eb',
+                color: '#ffffff',
+                fontWeight: '700',
+                cursor: 'pointer',
+                width: 'fit-content'
+              }}
+            >
+              Выбрать файлы
+
+              <input
+                type="file"
+                multiple
+                onChange={(e) => {
+                  const newFiles = Array.from(e.target.files);
+
+                  setSelectedFiles((prevFiles) => [
+                    ...prevFiles,
+                    ...newFiles
+                  ]);
+
+                  e.target.value = '';
+                }}
+                style={{
+                  display: 'none'
+                }}
+              />
+            </label>
+          </div>
+
+          {selectedFiles.length > 0 && (
+            <div style={{ marginTop: '12px' }}>
+              <p className="empty-text" style={{ marginBottom: '8px' }}>
+                Выбрано файлов: {selectedFiles.length}
+              </p>
+
+              {selectedFiles.map((file, index) => (
+                <div
+                  key={`${file.name}-${index}`}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: '10px',
+                    alignItems: 'center',
+                    marginBottom: '8px',
+                    padding: '10px',
+                    borderRadius: '10px',
+                    background: '#111827',
+                    border: '1px solid #374151',
+                    maxWidth: '100%',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <span
+                    className="empty-text"
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      overflowWrap: 'anywhere',
+                      wordBreak: 'break-word'
+                    }}
+                  >
+                    📎 {file.name}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedFiles((prevFiles) =>
+                        prevFiles.filter((_, fileIndex) => fileIndex !== index)
+                      );
+                    }}
+                    style={{
+                      padding: '4px 8px',
+                      background: '#dc2626',
+                      fontSize: '12px',
+                      flexShrink: 0
+                    }}
+                  >
+                    Убрать
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </label>
+
         <div
           style={{
             background: '#0f172a',
@@ -211,8 +352,8 @@ function CreateOrder() {
           </p>
         </div>
 
-        <button type="submit">
-          Создать заказ
+        <button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Создание...' : 'Создать заказ'}
         </button>
       </form>
     </div>
