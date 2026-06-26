@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import OrderFiles from '../components/OrderFiles';
+import OrderResultFiles from '../components/OrderResultFiles';
 import api from '../services/api';
 
 function OrderDetails() {
@@ -103,6 +104,39 @@ function OrderDetails() {
     loadOrder();
   }, [orderId]);
 
+  const completeOrder = async () => {
+    const confirmed = window.confirm(
+      'Завершить заказ? После этого можно будет оставить отзыв исполнителю.'
+    );
+
+    if (!confirmed) return;
+
+    const token = localStorage.getItem('token');
+
+    try {
+      await api.patch(
+        `/orders/${order.order_id || orderId}/complete`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      alert('Заказ завершён');
+
+      loadOrder();
+
+    } catch (error) {
+      console.error(error);
+      alert(
+        error.response?.data?.message ||
+        'Ошибка завершения заказа'
+      );
+    }
+  };
+
   if (message) {
     return (
       <div className="page">
@@ -143,6 +177,15 @@ function OrderDetails() {
   const isAdmin = user?.role === 'ADMIN';
 
   const canViewOrderFiles =
+    isOrderOwner ||
+    isAdmin ||
+    (user?.role === 'EDITOR' && order.status !== 'OPEN');
+
+  const canUploadResult =
+    user?.role === 'EDITOR' &&
+    order.status === 'IN_PROGRESS';
+
+  const canViewResult =
     isOrderOwner ||
     isAdmin ||
     (user?.role === 'EDITOR' && order.status !== 'OPEN');
@@ -246,6 +289,12 @@ function OrderDetails() {
             canUpload={false}
           />
         )}
+        {canViewResult && (
+          <OrderResultFiles
+            orderId={order.order_id || orderId}
+            canUpload={canUploadResult}
+          />
+        )}
       </div>
 
       <div
@@ -308,6 +357,15 @@ function OrderDetails() {
                 Смотреть отклики
               </button>
             </Link>
+          )}
+
+          {isOrderOwner && order.status === 'IN_PROGRESS' && (
+            <button
+              type="button"
+              onClick={completeOrder}
+            >
+              Завершить заказ
+            </button>
           )}
 
           {user?.role === 'EDITOR' && order.status === 'OPEN' && (

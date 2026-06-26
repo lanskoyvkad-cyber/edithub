@@ -18,3 +18,5 @@ frontend/build/
 backend/.env
 .env
 *.env
+
+backend/uploads/

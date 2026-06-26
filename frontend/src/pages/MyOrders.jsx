@@ -190,35 +190,6 @@ function MyOrders() {
     }
   };
 
-  const completeOrder = async (orderId) => {
-    const confirmed = window.confirm(
-      'Завершить заказ? После этого можно будет оставить отзыв исполнителю.'
-    );
-
-    if (!confirmed) return;
-
-    try {
-      await api.patch(
-        `/orders/${orderId}/complete`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
-      setMessage('Заказ завершён');
-      loadOrders();
-
-    } catch (error) {
-      setMessage(
-        error.response?.data?.message ||
-        'Ошибка завершения заказа'
-      );
-    }
-  };
-
   const filteredOrders = orders.filter((order) => {
     const text = `
       ${order.order_id || ''}
@@ -540,12 +511,6 @@ function MyOrders() {
                 </>
               )}
 
-              {order.status === 'IN_PROGRESS' && (
-                <button onClick={() => completeOrder(order.order_id)}>
-                  Завершить заказ
-                </button>
-              )}
-
               {order.status === 'COMPLETED' &&
                 order.accepted_editor_id &&
                 !order.review_id && (
@@ -571,7 +536,6 @@ function MyOrders() {
               </p>
             )}
 
-            <OrderFiles orderId={order.order_id} canUpload={false} />
           </div>
         ))
       )}

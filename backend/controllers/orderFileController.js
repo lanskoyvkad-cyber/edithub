@@ -1,3 +1,5 @@
+const path = require('path');
+const fs = require('fs');
 const pool = require('../config/db');
 
 const decodeFileName = (fileName) => {
@@ -221,6 +223,87 @@ exports.deleteOrderFile = async (req, res) => {
         console.error(error);
         res.status(500).json({
             message: 'Ошибка удаления файла заказа'
+        });
+    }
+};
+
+exports.downloadOrderFile = async (req, res) => {
+    try {
+        const { fileId } = req.params;
+        const currentUserId = Number(req.user.user_id || req.user.id);
+
+        const fileResult = await pool.query(
+            `
+      SELECT 
+        f.*,
+        o.user_id,
+        o.status
+      FROM order_files f
+      JOIN orders o ON f.order_id = o.order_id
+      WHERE f.order_file_id = $1
+      `,
+            [fileId]
+        );
+
+        if (fileResult.rows.length === 0) {
+            return res.status(404).json({
+                message: 'Файл не найден'
+            });
+        }
+
+        const file = fileResult.rows[0];
+
+        const isClient = Number(file.user_id) === currentUserId;
+        const isAdmin = req.user.role === 'ADMIN';
+
+        let isAssignedEditor = false;
+
+        if (req.user.role === 'EDITOR') {
+            const acceptedApplicationResult = await pool.query(
+                `
+        SELECT 1
+        FROM applications
+        WHERE order_id = $1
+        AND user_id = $2
+        AND status = 'ACCEPTED'
+        LIMIT 1
+        `,
+                [file.order_id, currentUserId]
+            );
+
+            isAssignedEditor = acceptedApplicationResult.rows.length > 0;
+        }
+
+        if (!isClient && !isAssignedEditor && !isAdmin) {
+            return res.status(403).json({
+                message: 'Нет доступа к скачиванию файла'
+            });
+        }
+
+        const fileNameOnDisk = path.basename(file.file_url);
+
+        const filePath = path.join(
+            __dirname,
+            '..',
+            'uploads',
+            'orders',
+            fileNameOnDisk
+        );
+
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({
+                message: 'Файл отсутствует на сервере'
+            });
+        }
+
+        return res.download(filePath, file.file_name || fileNameOnDisk);
+
+    } catch (error) {
+        console.error('Ошибка скачивания файла:', error);
+
+        return res.status(500).json({
+            message: 'Ошибка скачивания файла',
+            error: error.message
         });
     }
 };

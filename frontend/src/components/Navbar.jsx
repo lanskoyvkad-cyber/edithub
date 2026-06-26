@@ -12,6 +12,7 @@ function Navbar() {
   const user = savedUser ? JSON.parse(savedUser) : null;
 
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
 
   const loadUnreadChatNotifications = async () => {
     if (!token) {
@@ -45,6 +46,29 @@ function Navbar() {
     }
   };
 
+  const loadUnreadNotifications = async () => {
+    if (!token) {
+      setHasUnreadNotifications(false);
+      return;
+    }
+
+    try {
+      const response = await api.get('/notifications', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const hasUnread = (response.data.notifications || []).some(
+        (item) => !item.is_read
+      );
+
+      setHasUnreadNotifications(hasUnread);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   useEffect(() => {
     loadUnreadChatNotifications();
 
@@ -63,6 +87,25 @@ function Navbar() {
       window.removeEventListener('notifications-updated', handleNotificationsUpdate);
     };
   }, [token, location.pathname]);
+
+  useEffect(() => {
+    loadUnreadNotifications();
+
+    const handleNotificationsUpdated = () => {
+      loadUnreadNotifications();
+    };
+
+    window.addEventListener('notifications-updated', handleNotificationsUpdated);
+
+    const interval = setInterval(() => {
+      loadUnreadNotifications();
+    }, 10000);
+
+    return () => {
+      window.removeEventListener('notifications-updated', handleNotificationsUpdated);
+      clearInterval(interval);
+    };
+  }, [token]);
 
   const logout = () => {
     localStorage.removeItem('token');
@@ -89,6 +132,12 @@ function Navbar() {
       background: active ? '#2563eb' : 'transparent',
       color: active ? '#ffffff' : '#e5e7eb'
     };
+  };
+
+  const handleNotificationsClick = () => {
+    setHasUnreadNotifications(false);
+
+    window.dispatchEvent(new Event('notifications-updated'));
   };
 
   const renderChatsLink = () => (
@@ -248,8 +297,30 @@ function Navbar() {
         </Link>
 
         {token && (
-          <Link to="/notifications" style={navLinkStyle('/notifications')}>
+          <Link
+            to="/notifications"
+            onClick={handleNotificationsClick}
+            style={{
+              ...navLinkStyle('/notifications'),
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '7px'
+            }}
+          >
             Уведомления
+
+            {hasUnreadNotifications && (
+              <span
+                style={{
+                  width: '9px',
+                  height: '9px',
+                  borderRadius: '50%',
+                  background: '#dc2626',
+                  display: 'inline-block',
+                  flexShrink: 0
+                }}
+              />
+            )}
           </Link>
         )}
 

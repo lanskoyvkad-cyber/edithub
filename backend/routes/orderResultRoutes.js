@@ -5,10 +5,10 @@ const fs = require('fs');
 
 const router = express.Router();
 
-const orderFileController = require('../controllers/orderFileController');
+const orderResultController = require('../controllers/orderResultController');
 const authMiddleware = require('../middleware/authMiddleware');
 
-const uploadDir = path.join(__dirname, '..', 'uploads', 'orders');
+const uploadDir = path.join(__dirname, '..', 'uploads', 'order-results');
 
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
@@ -34,33 +34,33 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage,
     limits: {
-        fileSize: 300 * 1024 * 1024
+        fileSize: 500 * 1024 * 1024
     }
 });
 
 router.get(
+    '/file/:fileId/download',
+    authMiddleware,
+    orderResultController.downloadResultFile
+);
+
+router.delete(
+    '/file/:fileId',
+    authMiddleware,
+    orderResultController.deleteResultFile
+);
+
+router.get(
     '/:orderId',
     authMiddleware,
-    orderFileController.getOrderFiles
+    orderResultController.getResultFiles
 );
 
 router.post(
     '/:orderId',
     authMiddleware,
     upload.single('file'),
-    orderFileController.uploadOrderFile
-);
-
-router.get(
-    '/file/:fileId/download',
-    authMiddleware,
-    orderFileController.downloadOrderFile
-);
-
-router.delete(
-    '/file/:fileId',
-    authMiddleware,
-    orderFileController.deleteOrderFile
+    orderResultController.uploadResultFile
 );
 
 module.exports = router;

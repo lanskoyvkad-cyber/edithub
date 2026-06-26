@@ -1,25 +1,13 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
 
-function OrderFiles({ orderId, canUpload = false }) {
+function OrderResultFiles({ orderId, canUpload = false }) {
     const token = localStorage.getItem('token');
 
     const [files, setFiles] = useState([]);
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [loading, setLoading] = useState(false);
     const [hasAccess, setHasAccess] = useState(true);
-
-    const getFileUrl = (fileUrl) => {
-        if (!fileUrl) return '';
-
-        if (fileUrl.startsWith('http')) {
-            return fileUrl;
-        }
-
-        const backendUrl = api.defaults.baseURL.replace('/api', '');
-
-        return `${backendUrl}${fileUrl}`;
-    };
 
     const formatFileSize = (size) => {
         if (!size) return '';
@@ -31,43 +19,11 @@ function OrderFiles({ orderId, canUpload = false }) {
         return `${(size / 1024 / 1024).toFixed(1)} МБ`;
     };
 
-    const downloadFile = async (file) => {
-        try {
-            const response = await api.get(
-                `/order-files/file/${file.order_file_id}/download`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    },
-                    responseType: 'blob'
-                }
-            );
-
-            const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
-
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            link.download = file.file_name || 'file';
-            document.body.appendChild(link);
-            link.click();
-
-            link.remove();
-            window.URL.revokeObjectURL(blobUrl);
-
-        } catch (error) {
-            console.error(error);
-            alert(
-                error.response?.data?.message ||
-                'Ошибка скачивания файла'
-            );
-        }
-    };
-
     const loadFiles = async () => {
         try {
             setHasAccess(true);
 
-            const response = await api.get(`/order-files/${orderId}`, {
+            const response = await api.get(`/order-results/${orderId}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -83,11 +39,11 @@ function OrderFiles({ orderId, canUpload = false }) {
         }
     };
 
-    const uploadFile = async (e) => {
+    const uploadFiles = async (e) => {
         e.preventDefault();
 
         if (selectedFiles.length === 0) {
-            alert('Выберите один или несколько файлов');
+            alert('Выберите один или несколько файлов результата');
             return;
         }
 
@@ -96,42 +52,69 @@ function OrderFiles({ orderId, canUpload = false }) {
 
             for (const file of selectedFiles) {
                 const formData = new FormData();
-
                 formData.append('file', file);
 
-                await api.post(
-                    `/order-files/${orderId}`,
-                    formData,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`
-                        }
+                await api.post(`/order-results/${orderId}`, formData, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
                     }
-                );
+                });
             }
 
             setSelectedFiles([]);
             await loadFiles();
 
-            alert('Файлы прикреплены к заказу');
+            alert('Результат работы загружен');
         } catch (error) {
             console.error(error);
             alert(
                 error.response?.data?.message ||
-                'Ошибка загрузки файлов'
+                'Ошибка загрузки результата'
             );
         } finally {
             setLoading(false);
         }
     };
 
+    const downloadFile = async (file) => {
+        try {
+            const response = await api.get(
+                `/order-results/file/${file.result_file_id}/download`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    },
+                    responseType: 'blob'
+                }
+            );
+
+            const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
+
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = file.file_name || 'result-file';
+
+            document.body.appendChild(link);
+            link.click();
+
+            link.remove();
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            console.error(error);
+            alert(
+                error.response?.data?.message ||
+                'Ошибка скачивания результата'
+            );
+        }
+    };
+
     const deleteFile = async (fileId) => {
-        const confirmed = window.confirm('Удалить файл?');
+        const confirmed = window.confirm('Удалить файл результата?');
 
         if (!confirmed) return;
 
         try {
-            await api.delete(`/order-files/file/${fileId}`, {
+            await api.delete(`/order-results/file/${fileId}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -142,7 +125,7 @@ function OrderFiles({ orderId, canUpload = false }) {
             console.error(error);
             alert(
                 error.response?.data?.message ||
-                'Ошибка удаления файла'
+                'Ошибка удаления результата'
             );
         }
     };
@@ -166,12 +149,12 @@ function OrderFiles({ orderId, canUpload = false }) {
             }}
         >
             <h4 style={{ marginTop: 0 }}>
-                Файлы заказа
+                Результат работы
             </h4>
 
             {canUpload && (
                 <form
-                    onSubmit={uploadFile}
+                    onSubmit={uploadFiles}
                     style={{
                         marginBottom: '16px'
                     }}
@@ -191,7 +174,7 @@ function OrderFiles({ orderId, canUpload = false }) {
                             marginRight: '10px'
                         }}
                     >
-                        Выбрать файлы
+                        Выбрать результат
 
                         <input
                             type="file"
@@ -213,7 +196,7 @@ function OrderFiles({ orderId, canUpload = false }) {
                     </label>
 
                     <button type="submit" disabled={loading}>
-                        {loading ? 'Загрузка...' : 'Прикрепить файлы'}
+                        {loading ? 'Загрузка...' : 'Отправить результат'}
                     </button>
 
                     {selectedFiles.length > 0 && (
@@ -276,7 +259,7 @@ function OrderFiles({ orderId, canUpload = false }) {
 
             {files.length === 0 ? (
                 <p className="empty-text">
-                    Файлы пока не прикреплены.
+                    Результат пока не загружен.
                 </p>
             ) : (
                 <div
@@ -288,7 +271,7 @@ function OrderFiles({ orderId, canUpload = false }) {
                 >
                     {files.map((file) => (
                         <div
-                            key={file.order_file_id}
+                            key={file.result_file_id}
                             style={{
                                 display: 'flex',
                                 justifyContent: 'space-between',
@@ -324,7 +307,7 @@ function OrderFiles({ orderId, canUpload = false }) {
                                         wordBreak: 'break-word'
                                     }}
                                 >
-                                    📎 {file.file_name || 'Файл'}
+                                    📎 {file.file_name || 'Файл результата'}
                                 </button>
 
                                 <p
@@ -355,7 +338,7 @@ function OrderFiles({ orderId, canUpload = false }) {
                             {canUpload && (
                                 <button
                                     type="button"
-                                    onClick={() => deleteFile(file.order_file_id)}
+                                    onClick={() => deleteFile(file.result_file_id)}
                                     style={{
                                         background: '#dc2626',
                                         padding: '6px 10px',
@@ -373,4 +356,4 @@ function OrderFiles({ orderId, canUpload = false }) {
     );
 }
 
-export default OrderFiles;
+export default OrderResultFiles;

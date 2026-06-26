@@ -15,12 +15,13 @@ const userRoutes = require('./routes/userRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const complaintRoutes = require('./routes/complaintRoutes');
 const orderFileRoutes = require('./routes/orderFileRoutes');
+const orderResultRoutes = require('./routes/orderResultRoutes');
 const app = express();
 const path = require('path');
 
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads/chats', express.static(path.join(__dirname, 'uploads', 'chats')));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
@@ -33,6 +34,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/order-files', orderFileRoutes);
+app.use('/api/order-results', orderResultRoutes);
 
 app.get('/', (req, res) => {
   res.json({
